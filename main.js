@@ -45,10 +45,25 @@ animate();
 
 /* Tap To Play overlay interaction */
 const overlay = document.getElementById('tap-start-overlay');
+async function requestAnyFullscreen(el) {
+  const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  if (rfs) { try { await rfs.call(el); return true; } catch {} }
+  return false;
+}
+function isFs() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+function enterImmersiveFallback() {
+  document.documentElement.classList.add('app-immersive');
+  document.body.classList.add('app-immersive');
+  document.getElementById('game-container')?.classList.add('app-immersive');
+  document.getElementById('ui-container')?.classList.add('app-immersive');
+  setTimeout(()=>{ try { window.scrollTo(0,1); } catch {} }, 50);
+}
 const tryFS = async () => {
-  const el = document.documentElement;
-  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-  try { if (req) await req.call(el); } catch {}
+  const targets = [document.documentElement, document.body, document.getElementById('game-container')].filter(Boolean);
+  for (const t of targets) { if (await requestAnyFullscreen(t)) break; }
+  if (!isFs()) enterImmersiveFallback();
 };
 const dismissOverlay = async () => {
   await tryFS();

@@ -10,6 +10,11 @@ body {
     height: 100dvh;
 }
 
+html.app-immersive, body.app-immersive, #game-container.app-immersive, #ui-container.app-immersive {
+  height: 100svh !important;
+  overflow: hidden !important;
+}
+
 #game-container, #ui-container {
     /* ensure containers respect dynamic viewport height to avoid iOS toolbar scroll */
     height: 100dvh;
