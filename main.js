@@ -46,12 +46,16 @@ animate();
 /* Tap To Play overlay interaction */
 const overlay = document.getElementById('tap-start-overlay');
 async function requestAnyFullscreen(el) {
-  const rfs = el?.requestFullscreen || el?.webkitRequestFullscreen || el?.msRequestFullscreen;
-  if (rfs) { try { await rfs.call(el); return true; } catch {} }
+  const rfs = el?.requestFullscreen?.bind(el) || el?.webkitRequestFullscreen?.bind(el) || el?.msRequestFullscreen?.bind(el);
+  if (rfs) { try { await rfs({ navigationUI: 'hide' }); return true; } catch { try { await rfs(); return true; } catch {} } }
   return false;
 }
 function isFs() {
   return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+function isIOS() {
+  const ua = navigator.userAgent || '';
+  return /iP(hone|ad|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 function enterImmersiveFallback() {
   document.documentElement.classList.add('app-immersive');
@@ -64,6 +68,9 @@ async function tryLockOrientation() {
   try { await screen.orientation?.lock?.('landscape'); } catch {}
 }
 const tryFS = async () => {
+  if (isIOS() || (!document.fullscreenEnabled && !document.webkitFullscreenEnabled)) {
+    enterImmersiveFallback(); return;
+  }
   const targets = [
     document.getElementById('game-container'),
     renderer?.domElement,
@@ -71,8 +78,7 @@ const tryFS = async () => {
     document.body
   ].filter(Boolean);
   for (const t of targets) { if (await requestAnyFullscreen(t)) break; }
-  if (!isFs()) enterImmersiveFallback();
-  else tryLockOrientation();
+  if (!isFs()) enterImmersiveFallback(); else tryLockOrientation();
 };
 const dismissOverlay = async () => {
   await tryFS();
@@ -80,6 +86,7 @@ const dismissOverlay = async () => {
 };
 overlay?.addEventListener('click', dismissOverlay, { once: true });
 overlay?.addEventListener('touchstart', (e)=>{ e.preventDefault(); dismissOverlay(); }, { once: true, passive: false });
+overlay?.addEventListener('pointerup', dismissOverlay, { once: true });
 window.addEventListener('fullscreenchange', () => {
   if (isFs()) {
     document.documentElement.classList.remove('app-immersive');
