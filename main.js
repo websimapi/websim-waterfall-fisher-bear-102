@@ -46,7 +46,7 @@ animate();
 /* Tap To Play overlay interaction */
 const overlay = document.getElementById('tap-start-overlay');
 async function requestAnyFullscreen(el) {
-  const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  const rfs = el?.requestFullscreen || el?.webkitRequestFullscreen || el?.msRequestFullscreen;
   if (rfs) { try { await rfs.call(el); return true; } catch {} }
   return false;
 }
@@ -60,10 +60,19 @@ function enterImmersiveFallback() {
   document.getElementById('ui-container')?.classList.add('app-immersive');
   setTimeout(()=>{ try { window.scrollTo(0,1); } catch {} }, 50);
 }
+async function tryLockOrientation() {
+  try { await screen.orientation?.lock?.('landscape'); } catch {}
+}
 const tryFS = async () => {
-  const targets = [document.documentElement, document.body, document.getElementById('game-container')].filter(Boolean);
+  const targets = [
+    document.getElementById('game-container'),
+    renderer?.domElement,
+    document.documentElement,
+    document.body
+  ].filter(Boolean);
   for (const t of targets) { if (await requestAnyFullscreen(t)) break; }
   if (!isFs()) enterImmersiveFallback();
+  else tryLockOrientation();
 };
 const dismissOverlay = async () => {
   await tryFS();
@@ -71,3 +80,16 @@ const dismissOverlay = async () => {
 };
 overlay?.addEventListener('click', dismissOverlay, { once: true });
 overlay?.addEventListener('touchstart', (e)=>{ e.preventDefault(); dismissOverlay(); }, { once: true, passive: false });
+window.addEventListener('fullscreenchange', () => {
+  if (isFs()) {
+    document.documentElement.classList.remove('app-immersive');
+    document.body.classList.remove('app-immersive');
+    document.getElementById('game-container')?.classList.remove('app-immersive');
+    document.getElementById('ui-container')?.classList.remove('app-immersive');
+    tryLockOrientation();
+  } else {
+    enterImmersiveFallback();
+  }
+});
+window.addEventListener('orientationchange', () => { if (!isFs()) setTimeout(tryFS, 50); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !isFs()) setTimeout(tryFS, 50); });
