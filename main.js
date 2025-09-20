@@ -45,6 +45,9 @@ animate();
 
 /* Tap To Play overlay interaction */
 const overlay = document.getElementById('tap-start-overlay');
+const exitBtn = document.getElementById('exit-fs-btn');
+let NO_FULLSCREEN = false;
+
 async function requestAnyFullscreen(el) {
   const rfs = el?.requestFullscreen?.bind(el) || el?.webkitRequestFullscreen?.bind(el) || el?.msRequestFullscreen?.bind(el);
   if (rfs) { try { await rfs({ navigationUI: 'hide' }); return true; } catch { try { await rfs(); return true; } catch {} } }
@@ -63,11 +66,13 @@ function enterImmersiveFallback() {
   document.getElementById('game-container')?.classList.add('app-immersive');
   document.getElementById('ui-container')?.classList.add('app-immersive');
   setTimeout(()=>{ try { window.scrollTo(0,1); } catch {} }, 50);
+  exitBtn?.classList.remove('hidden');
 }
 async function tryLockOrientation() {
   try { await screen.orientation?.lock?.('landscape'); } catch {}
 }
 const tryFS = async () => {
+  if (NO_FULLSCREEN) return;
   if (isIOS() || (!document.fullscreenEnabled && !document.webkitFullscreenEnabled)) {
     enterImmersiveFallback(); return;
   }
@@ -81,7 +86,7 @@ const tryFS = async () => {
   if (!isFs()) enterImmersiveFallback(); /* else tryLockOrientation(); */
 };
 const dismissOverlay = async () => {
-  await tryFS();
+  if (!NO_FULLSCREEN) await tryFS();
   overlay?.classList.add('hidden');
 };
 overlay?.addEventListener('click', dismissOverlay, { once: true });
@@ -93,10 +98,28 @@ window.addEventListener('fullscreenchange', () => {
     document.body.classList.remove('app-immersive');
     document.getElementById('game-container')?.classList.remove('app-immersive');
     document.getElementById('ui-container')?.classList.remove('app-immersive');
+    exitBtn?.classList.remove('hidden');
     /* tryLockOrientation(); */
   } else {
-    enterImmersiveFallback();
+    if (!NO_FULLSCREEN) { enterImmersiveFallback(); }
+    else { exitBtn?.classList.add('hidden'); }
   }
 });
 window.addEventListener('orientationchange', () => { if (!isFs()) setTimeout(tryFS, 50); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !isFs()) setTimeout(tryFS, 50); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !isFs() && !NO_FULLSCREEN) setTimeout(tryFS, 50); });
+
+/* Exit fullscreen button logic */
+async function exitAnyFullscreen() {
+  try { await document.exitFullscreen?.(); } catch {}
+  try { await document.webkitExitFullscreen?.(); } catch {}
+}
+exitBtn?.addEventListener('click', async () => {
+  NO_FULLSCREEN = true;
+  overlay?.classList.add('hidden');
+  if (isFs()) await exitAnyFullscreen();
+  document.documentElement.classList.remove('app-immersive');
+  document.body.classList.remove('app-immersive');
+  document.getElementById('game-container')?.classList.remove('app-immersive');
+  document.getElementById('ui-container')?.classList.remove('app-immersive');
+  exitBtn?.classList.add('hidden');
+});
