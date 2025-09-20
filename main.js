@@ -72,13 +72,13 @@ const tryFS = async () => {
     enterImmersiveFallback(); return;
   }
   const targets = [
-    document.getElementById('game-container'),
-    renderer?.domElement,
     document.documentElement,
-    document.body
+    document.body,
+    document.getElementById('game-container'),
+    renderer?.domElement
   ].filter(Boolean);
   for (const t of targets) { if (await requestAnyFullscreen(t)) break; }
-  if (!isFs()) enterImmersiveFallback(); else tryLockOrientation();
+  if (!isFs()) enterImmersiveFallback(); /* else tryLockOrientation(); */
 };
 const dismissOverlay = async () => {
   await tryFS();
@@ -93,7 +93,7 @@ window.addEventListener('fullscreenchange', () => {
     document.body.classList.remove('app-immersive');
     document.getElementById('game-container')?.classList.remove('app-immersive');
     document.getElementById('ui-container')?.classList.remove('app-immersive');
-    tryLockOrientation();
+    /* tryLockOrientation(); */
   } else {
     enterImmersiveFallback();
   }
